@@ -9,4 +9,7 @@ pub fn fluxo_docker() {
     println!(" ● Usuário: {}", conexao.usuario);
     println!(" ● IP:      {}", conexao.ip);
     println!(" ● Porta:   {}", conexao.porta);
+
+    let projeto = scanner::escanear();
+    scanner::exibir_projeto(&projeto);
 }

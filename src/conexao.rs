@@ -1,10 +1,24 @@
-use dialoguer::{Select, Input};
+use dialoguer::{Confirm, Input, Select};
 
 pub struct Conexao {
     pub usuario: String,
     pub ip: String,
     pub chave: Option<String>,
     pub porta: u16
+}
+
+fn reinserir_conexao() -> usize {
+    println!("● String inválida — usuário ou IP não encontrado");
+    let tentar = Confirm::new()
+        .with_prompt("Tentar novamente")
+        .interact()
+        .unwrap();
+
+    if !tentar {
+        std::process::exit(1);
+    }
+    pedir_conexao();
+    0
 }
 
 pub fn pedir_conexao() -> Conexao {
@@ -16,7 +30,7 @@ pub fn pedir_conexao() -> Conexao {
         .items(&opcoes_conexao)
         .default(0)
         .interact()
-        .unwrap();
+        .unwrap_or_else(|_| reinserir_conexao());
 
     match tipo{
         0 => salvar_string_conexao(),
@@ -62,3 +76,4 @@ fn parsear_string_ssh(linha: &str) -> Conexao {
     }
 
 }
+
