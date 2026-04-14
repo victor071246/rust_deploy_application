@@ -1,7 +1,7 @@
 use std::process::Command;
 use crate::conexao::Conexao;
 use crate::scanner::Projeto;
-use crate::progress_animation::{self, *};
+use crate::progress_animation::{self};
 
 pub fn executar(conexao: &Conexao, projeto: &Projeto) {
     enviar_arquivos(conexao, projeto);

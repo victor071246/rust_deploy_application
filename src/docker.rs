@@ -1,4 +1,3 @@
-use dialoguer::{Input, Select};
 use crate::conexao;
 use crate::scanner;
 use crate::deploy;

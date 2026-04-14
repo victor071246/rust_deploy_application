@@ -5,7 +5,7 @@ pub mod binario;
 pub mod progress_animation;
 pub mod deploy;
 pub mod health;
-use dialoguer::{Select, Input};
+use dialoguer::Select;
 
 fn main() {
     println!("\n[-] rust_deploy\n");
