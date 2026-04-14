@@ -4,6 +4,7 @@ pub mod docker;
 pub mod binario;
 pub mod progress_animation;
 pub mod deploy;
+pub mod health;
 use dialoguer::{Select, Input};
 
 fn main() {

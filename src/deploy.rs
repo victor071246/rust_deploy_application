@@ -5,6 +5,7 @@ use crate::progress_animation::{self, *};
 
 pub fn executar(conexao: &Conexao, projeto: &Projeto) {
     enviar_arquivos(conexao, projeto);
+    subir_containers(conexao, projeto);
 }
 
 fn enviar_arquivos(conexao: &Conexao, projeto: &Projeto) {
@@ -33,6 +34,40 @@ fn enviar_arquivos(conexao: &Conexao, projeto: &Projeto) {
     }
     else {
         println!("\n ● Erro ao enviar arquivos");
+        std::process::exit(1);
+    }
+}
+
+fn subir_containers(conexao: &Conexao, projeto: &Projeto) {
+
+    let spinner = progress_animation::iniciar_animacao_carregamento("[-] Subindo containers docker".to_string());
+
+
+    let chave_arg = match &conexao.chave {
+        Some(chave) => format!("-i {}", chave),
+        None => String::new(),
+    };
+
+    let cmd = format!(
+        "cd /app/{} && docker-compose up -d --build",
+        std::path::Path::new(&projeto.pasta)
+            .file_name()
+            .unwrap()
+        .to_string_lossy()
+    );
+
+    let status = Command::new("ssh")
+        .arg(format!("-p {}", conexao.porta))
+        .args(chave_arg.split_whitespace())
+        .arg(format!("{}@{}", conexao.usuario, conexao.ip))
+        .arg(&cmd)
+        .status()
+        .unwrap();
+
+    if status.success() {
+        progress_animation::finalizar_animacao_carregamento(spinner, "  ● Containers subidos".to_string());
+    } else {
+        println!("  ● Erro ao subir containers");
         std::process::exit(1);
     }
 }
