@@ -10,6 +10,8 @@ pub fn executar(conexao: &Conexao, projeto: &Projeto) {
     instalar_rsyc(conexao);
     criar_pasta_app(conexao);
     enviar_arquivos(conexao, projeto);
+    derrubar_containers(conexao, projeto);
+    limpar_containers(conexao, projeto);
     subir_containers(conexao, projeto);
 }
 
@@ -64,10 +66,6 @@ fn enviar_arquivos(conexao: &Conexao, projeto: &Projeto) {
         .arg("--exclude=.next")
         .arg("--exclude=.nuxt")
         .arg("--exclude=.output")
-        .arg("--exclude=.env")
-        .arg("--exclude=.env.local")
-        .arg("--exclude=.env.production")
-        .arg("--exclude=.env.development")
         .arg("--exclude=__pycache__")
         .arg("--exclude=.pytest_cache")
         .arg("--exclude=.venv")
@@ -111,18 +109,16 @@ fn subir_containers(conexao: &Conexao, projeto: &Projeto) {
     };
         
     let cmd = format!(
-        "sudo systemctl start docker && cd /app/{} && docker-compose up -d --build",
-        std::path::Path::new(&projeto.pasta)
-            .file_name()
-            .unwrap()
+    "sudo systemctl start docker && cd /app/{} && docker-compose up -d --build > /tmp/deploy.log 2>&1 & BUILD_PID=$! && sleep 2 && tail -f --pid=$BUILD_PID /tmp/deploy.log",
+    std::path::Path::new(&projeto.pasta)
+        .file_name()
+        .unwrap()
         .to_string_lossy()
     );
 
     let status = Command::new("ssh")
         .arg(format!("-p {}", conexao.porta))
         .args(chave_arg.split_whitespace())
-        .arg("-o").arg("ServerAliveInterval=60")
-        .arg("-o").arg("ServerAliveCountMax=10")
         .arg(format!("{}@{}", conexao.usuario, conexao.ip))
         .arg(&cmd)
         .status()
@@ -187,4 +183,54 @@ fn instalar_docker(conexao: &Conexao) {
         .arg("which docker || (curl -fsSL https://get.docker.com | sudo sh)")
         .status()
         .unwrap();
+}
+
+fn derrubar_containers(conexao: &Conexao, projeto: &Projeto) {
+    let spinner = progress_animation::iniciar_animacao_carregamento("[-] Derrubando containers".to_string());
+
+    let cmd = format!(
+    "sudo systemctl start docker && cd /app/{} && docker compose down && docker compose up -d --build > /tmp/deploy.log 2>&1 BUILD_PID=$! && sleep 2 && tail -f --pid=$BUILD_PID /tmp/deploy.log",
+    std::path::Path::new(&projeto.pasta)
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+    );
+
+    let mut comando = Command::new("ssh");
+    if let Some(chave) = &conexao.chave {
+        comando.arg("-i").arg(chave);
+    }
+    comando
+        .arg("-p").arg(&conexao.porta.to_string())
+        .arg(format!("{}@{}", conexao.usuario, conexao.ip))
+        .arg(&cmd)
+        .status()
+        .unwrap();
+
+    progress_animation::finalizar_animacao_carregamento(spinner, " ● Containers derrubados".to_string());
+}
+
+fn limpar_containers(conexao: &Conexao, projeto: &Projeto) {
+    let spinner = progress_animation::iniciar_animacao_carregamento("[-] Limpando containers".to_string());
+
+    let cmd = format!(
+        "cd /app/{} && docker compose down --rmi all 2>/dev/null || true",
+        std::path::Path::new(&projeto.pasta)
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+    );
+
+    let mut comando = Command::new("ssh");
+    if let Some(chave) = &conexao.chave {
+        comando.arg("-i").arg(chave);
+    }
+    comando
+        .arg("-p").arg(&conexao.porta.to_string())
+        .arg(format!("{}@{}", conexao.usuario, conexao.ip))
+        .arg(&cmd)
+        .status()
+        .unwrap();
+
+    progress_animation::finalizar_animacao_carregamento(spinner, " ● Containers excluídos".to_string());
 }

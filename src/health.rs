@@ -46,9 +46,12 @@ fn checar_containers(conexao: &Conexao, compose: &DockerCompose) {
             nome
         );
 
-        let output = Command::new("ssh")
-            .arg(format!("-p {}", conexao.porta))
-            .args(chave_arg.split_whitespace())
+        let mut comando_ssh = Command::new("ssh");
+        if let Some(chave) = &conexao.chave {
+            comando_ssh.arg("-i").arg(chave);
+        }
+        let output = comando_ssh
+            .arg("-p").arg(&conexao.porta.to_string())
             .arg(format!("{}@{}", conexao.usuario, conexao.ip))
             .arg(&cmd)
             .output()
@@ -73,7 +76,7 @@ fn testar_portas(conexao: &Conexao, compose: &DockerCompose) {
                 let porta_host = port.split(':').next().unwrap();
                 let addr = format!("{}:{}", conexao.ip, porta_host);
 
-                match TcpStream::connect(&addr) {
+                match TcpStream::connect_timeout(&addr.parse().unwrap(), std::time::Duration::from_secs(5)) {
                     Ok(_) => println!(" ● {} ({}): ✓", nome, porta_host),
                     Err(_) => println!("● {} ({}):  ✗", nome, porta_host)
                 }
